@@ -1,0 +1,40 @@
+# ArcGIS artifacts
+*.lock
+*.gdb/
+*.sde
+*.lyrx
+*.aprx
+*.atbx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config backups (keep originals, ignore dated backups)
+Config/*_backup_*.json
+
+# Test outputs
+TestData/
+*.xlsx
+*.csv
+!Templates/*.xlsx
+
+# Logs
+*.log
+

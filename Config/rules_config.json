@@ -1,0 +1,133 @@
+{
+  "rules": [
+    {
+      "rule_code": "ROAD_INTERSECTION_ANGLE",
+      "rule_name": "Road Intersection Angle",
+      "description": "Proposed roads must intersect existing roads at angles >= 30 degrees",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "ProposedRoads",
+      "target_fc": "Roads",
+      "rule_type": "INTERSECTION_ANGLE",
+      "parameters": {
+        "min_angle_degrees": 30,
+        "max_angle_degrees": 150,
+        "search_distance_meters": 25
+      }
+    },
+    {
+      "rule_code": "BUILDING_SETBACK",
+      "rule_name": "Building Setback from Roads",
+      "description": "Buildings must be at least 15 meters from road centerlines",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "ProposedBuildings",
+      "target_fc": "Roads",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 15,
+        "measurement_type": "PLANAR"
+      }
+    },
+    {
+      "rule_code": "UTILITY_CROSSING_ANGLE",
+      "rule_name": "Utility-Road Crossing Angle",
+      "description": "Utilities should cross roads at angles >= 60 degrees (warning only)",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "ProposedUtilities",
+      "target_fc": "Roads",
+      "rule_type": "CROSSING_ANGLE",
+      "parameters": {
+        "min_angle_degrees": 60,
+        "max_angle_degrees": 120,
+        "search_distance_meters": 50
+      }
+    },
+    {
+      "rule_code": "PARCEL_CONTAINMENT",
+      "rule_name": "Development Within Parcel",
+      "description": "Proposed development must be within owned parcels",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "ProposedBuildings",
+      "target_fc": "Parcels",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "COMPLETELY_WITHIN",
+        "tolerance_meters": 0.5
+      }
+    },
+    {
+      "rule_code": "PIPELINE_SEPARATION",
+      "rule_name": "Pipeline Minimum Separation",
+      "description": "Pipelines must maintain minimum separation based on diameter",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "ProposedUtilities",
+      "target_fc": "Utilities",
+      "rule_type": "ATTRIBUTE_DISTANCE",
+      "parameters": {
+        "base_distance_meters": 10,
+        "attribute_field": "DIAMETER_INCHES",
+        "multiplier": 0.5,
+        "where_clause": "UTILITY_TYPE = 'Pipeline'"
+      }
+    },
+    {
+      "rule_code": "BUILDING_SEPARATION",
+      "rule_name": "Building Minimum Separation",
+      "description": "New buildings must maintain 5m separation from existing buildings",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "ProposedBuildings",
+      "target_fc": "Buildings",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 5
+      }
+    },
+    {
+      "rule_code": "UTILITY_ACCESS",
+      "rule_name": "Utility Access Distance",
+      "description": "Buildings must be within 100m of utility connections",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "ProposedBuildings",
+      "target_fc": "Utilities",
+      "rule_type": "MAXIMUM_DISTANCE",
+      "parameters": {
+        "max_distance_meters": 100
+      }
+    },
+    {
+      "rule_code": "ROAD_BUFFER_ZONE",
+      "rule_name": "Road Buffer Zone",
+      "description": "Proposed utilities should not overlap road buffer zones",
+      "severity": "WARNING",
+      "active": false,
+      "source_fc": "ProposedUtilities",
+      "target_fc": "Roads",
+      "rule_type": "BUFFER_OVERLAP",
+      "parameters": {
+        "buffer_distance_meters": 5
+      }
+    }
+  ],
+  "global_settings": {
+    "spatial_reference": 3857,
+    "tolerance": 0.01,
+    "parallel_processing": true,
+    "max_workers": 4,
+    "default_severity": "ERROR",
+    "stop_on_critical": false
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2024-01-01",
+    "modified": "2024-01-01",
+    "author": "Spatial Validation Team",
+    "description": "Default rule configuration for infrastructure validation"
+  }
+}
+
