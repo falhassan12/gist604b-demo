@@ -3,10 +3,10 @@
     {
       "rule_code": "ROAD_INTERSECTION_ANGLE",
       "rule_name": "Road Intersection Angle",
-      "description": "Proposed roads must intersect existing roads at angles >= 30 degrees",
-      "severity": "ERROR",
+      "description": "Proposed access roads must intersect existing roads at reasonable angles to ensure safe turning movements.",
+      "severity": "WARNING",
       "active": true,
-      "source_fc": "ProposedRoads",
+      "source_fc": "Access_Roads",
       "target_fc": "Roads",
       "rule_type": "INTERSECTION_ANGLE",
       "parameters": {
@@ -16,12 +16,246 @@
       }
     },
     {
-      "rule_code": "BUILDING_SETBACK",
-      "rule_name": "Building Setback from Roads",
-      "description": "Buildings must be at least 15 meters from road centerlines",
+      "rule_code": "ACCESS_ROAD_MAX_DISTANCE",
+      "rule_name": "Maximum Distance to Access Road",
+      "description": "Proposed LUP sites should be within a reasonable distance of an existing access road.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Roads",
+      "rule_type": "MAXIMUM_DISTANCE",
+      "parameters": {
+        "max_distance_meters": 250
+      }
+    },
+    {
+      "rule_code": "SITE_WITHIN_RESERVATION",
+      "rule_name": "Site Within Company Reservation",
+      "description": "Proposed LUP sites must be located within the authorized company reservation boundary.",
       "severity": "ERROR",
       "active": true,
-      "source_fc": "ProposedBuildings",
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Company_Reservation",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "COMPLETELY_WITHIN",
+        "treat_outside_as_violation": true
+      }
+    },
+    {
+      "rule_code": "SITE_OUTSIDE_DISPUTED_AREAS",
+      "rule_name": "Site Outside Disputed Areas",
+      "description": "Proposed LUP sites must not fall within legally disputed areas.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Disputed_Areas",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "COMPLETELY_WITHIN",
+        "treat_inside_as_violation": true
+      }
+    },
+    {
+      "rule_code": "SITE_IN_RELEASED_AREA_WARNING",
+      "rule_name": "Site in Released Area (Warning)",
+      "description": "Sites in previously released areas should be flagged for additional legal review.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Released_Areas",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "PARTIALLY_WITHIN",
+        "treat_inside_as_violation": false
+      }
+    },
+    {
+      "rule_code": "PIPELINE_MIN_DISTANCE",
+      "rule_name": "Minimum Distance from Pipelines",
+      "description": "Proposed LUP sites must maintain a minimum distance from transmission pipelines.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Pipelines",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 30,
+        "measurement_type": "PLANAR"
+      }
+    },
+    {
+      "rule_code": "PIPELINE_ATTRIBUTE_DISTANCE",
+      "rule_name": "Pipeline Distance Based on Diameter",
+      "description": "Required separation increases with pipeline diameter.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Pipelines",
+      "rule_type": "ATTRIBUTE_DISTANCE",
+      "parameters": {
+        "attribute_field": "DIAMETER_INCHES",
+        "base_distance_meters": 20,
+        "multiplier": 1.0,
+        "where_clause": "DIAMETER_INCHES >= 24"
+      }
+    },
+    {
+      "rule_code": "PIPELINE_ROW_CONTAINMENT",
+      "rule_name": "No Permanent Use Inside Pipeline ROW",
+      "description": "Permanent structures are not allowed within pipeline right-of-way.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Pipeline_ROW",
+      "rule_type": "BUFFER_OVERLAP",
+      "parameters": {
+        "buffer_distance_meters": 0,
+        "treat_any_overlap_as_violation": true
+      }
+    },
+    {
+      "rule_code": "FLOWLINE_MIN_DISTANCE",
+      "rule_name": "Minimum Distance from Flowlines",
+      "description": "Proposed LUP sites must maintain minimum separation from flowlines.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Flowlines",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 15
+      }
+    },
+    {
+      "rule_code": "POWERLINE_MIN_DISTANCE",
+      "rule_name": "Minimum Distance from Overhead Powerlines",
+      "description": "Proposed buildings must keep a safety setback from high-voltage overhead lines.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Powerline_OHTL",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 25
+      }
+    },
+    {
+      "rule_code": "POWERLINE_ROW_NO_BUILDINGS",
+      "rule_name": "No Buildings in Powerline ROW",
+      "description": "No permanent structures are allowed within overhead powerline right-of-way.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Existing_Buildings",
+      "target_fc": "Powerline_ROW",
+      "rule_type": "BUFFER_OVERLAP",
+      "parameters": {
+        "buffer_distance_meters": 0,
+        "treat_any_overlap_as_violation": true
+      }
+    },
+    {
+      "rule_code": "FIBER_OPTIC_CLEARANCE",
+      "rule_name": "Minimum Distance from Fiber Optic Cables",
+      "description": "Construction should maintain a nominal clearance from fiber optic cables.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Fiber_Optic_Cable",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 5
+      }
+    },
+    {
+      "rule_code": "COMM_CABLE_CLEARANCE",
+      "rule_name": "Minimum Distance from Communication Cables",
+      "description": "Projects should avoid direct overlap with communication cables.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Communication_Cable",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 5
+      }
+    },
+    {
+      "rule_code": "WELL_MIN_DISTANCE",
+      "rule_name": "Minimum Distance from Wells",
+      "description": "Proposed LUP sites must maintain safety radius from wells.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Wells",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 60
+      }
+    },
+    {
+      "rule_code": "WELL_HIGH_RISK_BUFFER",
+      "rule_name": "High-Risk Well Buffer",
+      "description": "Sensitive land uses must be located outside the high-risk well buffer.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Wells",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 100,
+        "sensitive_use_field": "USE_TYPE",
+        "sensitive_use_values": ["School", "Hospital", "Residential", "HighOccupancy"]
+      }
+    },
+    {
+      "rule_code": "HAZARD_ZONE_OVERLAP",
+      "rule_name": "No Overlap with Hazard Zones",
+      "description": "Proposed LUP sites must not overlap designated hazard zones.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Hazard_Zones",
+      "rule_type": "BUFFER_OVERLAP",
+      "parameters": {
+        "buffer_distance_meters": 0,
+        "treat_any_overlap_as_violation": true
+      }
+    },
+    {
+      "rule_code": "ENVIRONMENTAL_BUFFER_OVERLAP",
+      "rule_name": "Environmental Buffer Protection",
+      "description": "No development is allowed inside environmental protection buffers.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Environmental_Buffers",
+      "rule_type": "BUFFER_OVERLAP",
+      "parameters": {
+        "buffer_distance_meters": 0,
+        "treat_any_overlap_as_violation": true
+      }
+    },
+    {
+      "rule_code": "HIGHWAY_BUFFER",
+      "rule_name": "Highway Buffer Setback",
+      "description": "Proposed LUP sites must maintain a buffer from highways.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Highways",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 30
+      }
+    },
+    {
+      "rule_code": "ROAD_BUILDING_SETBACK",
+      "rule_name": "Building Setback from Roads",
+      "description": "Buildings must be set back from road centerlines to allow safe clearances.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Existing_Buildings",
       "target_fc": "Roads",
       "rule_type": "MINIMUM_DISTANCE",
       "parameters": {
@@ -30,70 +264,179 @@
       }
     },
     {
-      "rule_code": "UTILITY_CROSSING_ANGLE",
-      "rule_name": "Utility-Road Crossing Angle",
-      "description": "Utilities should cross roads at angles >= 60 degrees (warning only)",
-      "severity": "WARNING",
+      "rule_code": "GOSP_BUFFER",
+      "rule_name": "Buffer from GOSP Facilities",
+      "description": "Public or sensitive land uses should not be located near GOSP facilities.",
+      "severity": "ERROR",
       "active": true,
-      "source_fc": "ProposedUtilities",
-      "target_fc": "Roads",
-      "rule_type": "CROSSING_ANGLE",
+      "source_fc": "Proposed_Sites",
+      "target_fc": "GOSP_Facilities",
+      "rule_type": "MINIMUM_DISTANCE",
       "parameters": {
-        "min_angle_degrees": 60,
-        "max_angle_degrees": 120,
-        "search_distance_meters": 50
+        "min_distance_meters": 200
       }
     },
     {
-      "rule_code": "PARCEL_CONTAINMENT",
-      "rule_name": "Development Within Parcel",
-      "description": "Proposed development must be within owned parcels",
+      "rule_code": "GAS_PLANT_BUFFER",
+      "rule_name": "Buffer from Gas Plants",
+      "description": "High-risk gas facilities require larger separation distances.",
       "severity": "ERROR",
       "active": true,
-      "source_fc": "ProposedBuildings",
-      "target_fc": "Parcels",
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Gas_Plants",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 500
+      }
+    },
+    {
+      "rule_code": "SUBSTATION_BUFFER",
+      "rule_name": "Buffer from Substations",
+      "description": "Residential developments should not be directly adjacent to electrical substations.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Substations",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 50
+      }
+    },
+    {
+      "rule_code": "PUMP_STATION_BUFFER",
+      "rule_name": "Buffer from Pump Stations",
+      "description": "Non-industrial uses should be kept at a distance from pump stations.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Pump_Stations",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 50
+      }
+    },
+    {
+      "rule_code": "SCHOOL_BUFFER",
+      "rule_name": "Buffer from Schools",
+      "description": "High-impact or industrial LUP sites should be separated from schools.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Schools",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 150,
+        "project_type_field": "USE_TYPE",
+        "sensitive_project_types": ["Industrial", "Warehouse", "Fuel", "HighRisk"]
+      }
+    },
+    {
+      "rule_code": "HOSPITAL_BUFFER",
+      "rule_name": "Buffer from Hospitals",
+      "description": "High-impact projects must maintain adequate separation from hospitals.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Hospitals",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 150,
+        "project_type_field": "USE_TYPE",
+        "sensitive_project_types": ["Industrial", "Warehouse", "Fuel", "HighRisk"]
+      }
+    },
+    {
+      "rule_code": "RESIDENTIAL_BUFFER_FROM_INDUSTRIAL",
+      "rule_name": "Residential Buffer from Industrial Sites",
+      "description": "New residential projects should not be located too close to industrial facilities.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Industrial_Facilities",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 200
+      }
+    },
+    {
+      "rule_code": "TEMP_CAMP_NEAR_RESIDENTIAL",
+      "rule_name": "Temporary Camp Near Residential",
+      "description": "Temporary camps with high occupancy near residential areas should be flagged.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Temporary_Use_Areas",
+      "target_fc": "ResidentialAreas",
+      "rule_type": "MINIMUM_DISTANCE",
+      "parameters": {
+        "min_distance_meters": 100,
+        "occupancy_field": "OCCUPANCY",
+        "min_occupancy_for_rule": 24
+      }
+    },
+    {
+      "rule_code": "ROW_CORRIDOR_CONTAINMENT",
+      "rule_name": "Right-of-Way Corridor Restriction",
+      "description": "LUP sites should not occupy protected right-of-way corridors.",
+      "severity": "ERROR",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "ROW_Corridors",
       "rule_type": "CONTAINMENT",
       "parameters": {
         "containment_type": "COMPLETELY_WITHIN",
-        "tolerance_meters": 0.5
+        "treat_inside_as_violation": true
       }
     },
     {
-      "rule_code": "PIPELINE_SEPARATION",
-      "rule_name": "Pipeline Minimum Separation",
-      "description": "Pipelines must maintain minimum separation based on diameter",
-      "severity": "ERROR",
-      "active": true,
-      "source_fc": "ProposedUtilities",
-      "target_fc": "Utilities",
-      "rule_type": "ATTRIBUTE_DISTANCE",
-      "parameters": {
-        "base_distance_meters": 10,
-        "attribute_field": "DIAMETER_INCHES",
-        "multiplier": 0.5,
-        "where_clause": "UTILITY_TYPE = 'Pipeline'"
-      }
-    },
-    {
-      "rule_code": "BUILDING_SEPARATION",
-      "rule_name": "Building Minimum Separation",
-      "description": "New buildings must maintain 5m separation from existing buildings",
-      "severity": "ERROR",
-      "active": true,
-      "source_fc": "ProposedBuildings",
-      "target_fc": "Buildings",
-      "rule_type": "MINIMUM_DISTANCE",
-      "parameters": {
-        "min_distance_meters": 5
-      }
-    },
-    {
-      "rule_code": "UTILITY_ACCESS",
-      "rule_name": "Utility Access Distance",
-      "description": "Buildings must be within 100m of utility connections",
+      "rule_code": "PIPELINE_ROAD_CROSSING_ANGLE",
+      "rule_name": "Pipeline–Road Crossing Angle",
+      "description": "Pipelines should cross roads at acceptable angles for safe design and maintenance.",
       "severity": "WARNING",
       "active": true,
-      "source_fc": "ProposedBuildings",
+      "source_fc": "Pipelines",
+      "target_fc": "Roads",
+      "rule_type": "CROSSING_ANGLE",
+      "parameters": {
+        "min_angle_degrees": 45,
+        "max_angle_degrees": 135,
+        "search_distance_meters": 25
+      }
+    },
+    {
+      "rule_code": "PIPELINE_POWERLINE_CROSSING_ANGLE",
+      "rule_name": "Pipeline–Powerline Crossing Angle",
+      "description": "Where pipelines and powerlines cross, the crossing angle should be within acceptable limits.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Pipelines",
+      "target_fc": "Powerline_OHTL",
+      "rule_type": "CROSSING_ANGLE",
+      "parameters": {
+        "min_angle_degrees": 45,
+        "max_angle_degrees": 135,
+        "search_distance_meters": 25
+      }
+    },
+    {
+      "rule_code": "SITE_WITHIN_5KM_ZONE",
+      "rule_name": "Within 5 km Influence Zone",
+      "description": "Sites within 5 km of company reservation should be flagged for extended review.",
+      "severity": "INFO",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Five_KM_Influence_Zone",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "PARTIALLY_WITHIN"
+      }
+    },
+    {
+      "rule_code": "UTILITY_ACCESS_MAX_DISTANCE",
+      "rule_name": "Maximum Distance to Utilities",
+      "description": "Proposed sites should be within a reasonable distance from existing utility connections.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
       "target_fc": "Utilities",
       "rule_type": "MAXIMUM_DISTANCE",
       "parameters": {
@@ -101,16 +444,49 @@
       }
     },
     {
-      "rule_code": "ROAD_BUFFER_ZONE",
-      "rule_name": "Road Buffer Zone",
-      "description": "Proposed utilities should not overlap road buffer zones",
+      "rule_code": "TRAFFIC_IMPACT_NEAR_HIGHWAY",
+      "rule_name": "Traffic Impact Near Highway",
+      "description": "High-occupancy sites near highways should be flagged for traffic impact review.",
       "severity": "WARNING",
-      "active": false,
-      "source_fc": "ProposedUtilities",
-      "target_fc": "Roads",
-      "rule_type": "BUFFER_OVERLAP",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Highways",
+      "rule_type": "MINIMUM_DISTANCE",
       "parameters": {
-        "buffer_distance_meters": 5
+        "min_distance_meters": 0,
+        "max_distance_meters": 500,
+        "occupancy_field": "OCCUPANCY",
+        "min_occupancy_for_rule": 50
+      }
+    },
+    {
+      "rule_code": "VOLTAGE_INFLUENCE_SENSITIVE_USE",
+      "rule_name": "Voltage Influence Zone for Sensitive Uses",
+      "description": "Sensitive land uses should not be placed inside high voltage influence zones.",
+      "severity": "WARNING",
+      "active": true,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Voltage_Influence_Zone",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "COMPLETELY_WITHIN",
+        "treat_inside_as_violation": true,
+        "sensitive_use_field": "USE_TYPE",
+        "sensitive_use_values": ["School", "Hospital", "Residential"]
+      }
+    },
+    {
+      "rule_code": "AIRPORT_PROTECTION_ZONE",
+      "rule_name": "Airport Protection Zone",
+      "description": "Proposed sites inside airport protection zones must be flagged and reviewed.",
+      "severity": "ERROR",
+      "active": false,
+      "source_fc": "Proposed_Sites",
+      "target_fc": "Airport_Protection_Zones",
+      "rule_type": "CONTAINMENT",
+      "parameters": {
+        "containment_type": "COMPLETELY_WITHIN",
+        "treat_inside_as_violation": true
       }
     }
   ],
@@ -124,10 +500,11 @@
   },
   "metadata": {
     "version": "1.0.0",
-    "created": "2024-01-01",
-    "modified": "2024-01-01",
-    "author": "Spatial Validation Team",
-    "description": "Default rule configuration for infrastructure validation"
+    "created": "2025-12-11",
+    "modified": "2025-12-11",
+    "author": "Fadil Alhassan (LUP AI Project)",
+    "description": "Rule configuration for AI-assisted LUP spatial validation (pipelines, utilities, sensitive areas, and infrastructure)."
   }
 }
+
 

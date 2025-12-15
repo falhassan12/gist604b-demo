@@ -1,441 +1,643 @@
-"""
-Test Data Generator for Spatial Validation Toolbox
-
-Creates sample feature classes with known validation scenarios
-for testing the validation engine.
-
-Usage:
-    Run in ArcGIS Pro Python window or as standalone script.
-"""
+# LUP_TestData.py
+# ---------------------------------------------------------------------------
+# Test Data Generator for LUP Spatial Validation (Aramco-style)
+#
+# Creates a file geodatabase with infrastructure + proposed LUP sites
+# designed to trigger PASS / WARNING / ERROR cases for rules_config.json
+#
+# Usage:
+#   - Run this script in ArcGIS Pro Python window
+#   - أو كـ standalone script مع ArcPy متثبت
+# ---------------------------------------------------------------------------
 
 import arcpy
 import os
-import math
+import tempfile
 
-# Web Mercator spatial reference (commonly used)
+# نستخدم Web Mercator (متر، سهل نحسب المسافات)
 SR_WEB_MERCATOR = arcpy.SpatialReference(3857)
 
-# UTM Zone 12N (for Arizona/Tucson area)
-SR_UTM_12N = arcpy.SpatialReference(32612)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def create_rectangle(center_x, center_y, width, height, spatial_reference):
+    """Create a rectangular polygon geometry centered at (x,y)."""
+    half_w = width / 2.0
+    half_h = height / 2.0
+
+    points = [
+        arcpy.Point(center_x - half_w, center_y - half_h),
+        arcpy.Point(center_x + half_w, center_y - half_h),
+        arcpy.Point(center_x + half_w, center_y + half_h),
+        arcpy.Point(center_x - half_w, center_y + half_h),
+        arcpy.Point(center_x - half_w, center_y - half_h)  # close ring
+    ]
+    return arcpy.Polygon(arcpy.Array(points), spatial_reference)
 
 
-def create_test_geodatabase(output_folder, gdb_name="ValidationTest.gdb"):
-    """
-    Create a file geodatabase for test data
-    
-    Args:
-        output_folder: Folder to create geodatabase in
-        gdb_name: Name of geodatabase
-        
-    Returns:
-        Path to created geodatabase
-    """
+# ---------------------------------------------------------------------------
+# إنشاء الـ GDB
+# ---------------------------------------------------------------------------
+
+def create_lup_geodatabase(output_folder, gdb_name="LUP_ValidationTest.gdb"):
     gdb_path = os.path.join(output_folder, gdb_name)
-    
+
     if arcpy.Exists(gdb_path):
         print(f"Geodatabase already exists: {gdb_path}")
         return gdb_path
-    
+
     arcpy.CreateFileGDB_management(output_folder, gdb_name)
     print(f"Created geodatabase: {gdb_path}")
-    
     return gdb_path
 
 
-def create_infrastructure_features(gdb_path, spatial_reference=SR_WEB_MERCATOR):
+# ---------------------------------------------------------------------------
+# إنشاء طبقات البنية التحتية (Infrastructure)
+# ---------------------------------------------------------------------------
+
+def create_lup_infrastructure_features(gdb_path, spatial_reference=SR_WEB_MERCATOR):
     """
-    Create sample infrastructure feature classes (existing features to validate against)
-    
-    Creates:
-        - Roads (polyline)
-        - Buildings (polygon)
-        - Utilities (polyline)
-        - Parcels (polygon)
+    Creates infrastructure feature classes needed by rules_config.json:
+    - Company_Reservation (polygon)
+    - Released_Areas (polygon)
+    - Disputed_Areas (polygon)
+    - Five_KM_Influence_Zone (polygon)
+    - Pipelines (polyline)
+    - Pipeline_ROW (polygon)
+    - Flowlines (polyline)
+    - Powerline_OHTL (polyline)
+    - Powerline_ROW (polygon)
+    - Fiber_Optic_Cable (polyline)
+    - Communication_Cable (polyline)
+    - Roads (polyline)
+    - Highways (polyline)
+    - Wells (point)
+    - Hazard_Zones (polygon)
+    - Environmental_Buffers (polygon)
+    - GOSP_Facilities (polygon)
+    - Gas_Plants (polygon)
+    - Substations (polygon)
+    - Pump_Stations (polygon)
+    - Schools (polygon)
+    - Hospitals (polygon)
+    - Industrial_Facilities (polygon)
+    - ResidentialAreas (polygon)
+    - Utilities (polyline)
+    - ROW_Corridors (polygon)
+    - Voltage_Influence_Zone (polygon)
+    - Airport_Protection_Zones (polygon)
     """
-    
-    # Base coordinates (adjust for your area of interest)
-    # These are in Web Mercator (meters) - roughly Tucson, AZ area
-    base_x = -12345000
+
+    base_x = -12345000  # موقع افتراضي
     base_y = 3812000
-    
-    # =========================================
-    # ROADS - Existing road network
-    # =========================================
+
+    # =============================== Company_Reservation =====================
+    fc = os.path.join(gdb_path, "Company_Reservation")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Company_Reservation", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x, base_y, 2000, 2000, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {fc}")
+
+    # =============================== Released_Areas ==========================
+    fc = os.path.join(gdb_path, "Released_Areas")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Released_Areas", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 900, base_y + 900, 600, 600, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {fc}")
+
+    # =============================== Disputed_Areas ==========================
+    fc = os.path.join(gdb_path, "Disputed_Areas")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Disputed_Areas", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 900, base_y + 900, 500, 500, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {fc}")
+
+    # =============================== Five_KM_Influence_Zone ==================
+    fc = os.path.join(gdb_path, "Five_KM_Influence_Zone")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Five_KM_Influence_Zone", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            # مستطيل كبير يمثل نطاق 5 كم تقريباً
+            poly = create_rectangle(base_x, base_y, 10000, 10000, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {fc}")
+
+    # =============================== Roads ===================================
     roads_fc = os.path.join(gdb_path, "Roads")
-    
     if not arcpy.Exists(roads_fc):
         arcpy.CreateFeatureclass_management(
             gdb_path, "Roads", "POLYLINE",
             spatial_reference=spatial_reference
         )
         arcpy.AddField_management(roads_fc, "RoadName", "TEXT", field_length=100)
-        arcpy.AddField_management(roads_fc, "RoadType", "TEXT", field_length=50)
-        arcpy.AddField_management(roads_fc, "Width", "DOUBLE")
-        
-        with arcpy.da.InsertCursor(roads_fc, ['SHAPE@', 'RoadName', 'RoadType', 'Width']) as cursor:
-            # Main east-west road
-            points1 = [
-                arcpy.Point(base_x - 500, base_y),
-                arcpy.Point(base_x + 500, base_y)
+        with arcpy.da.InsertCursor(roads_fc, ["SHAPE@", "RoadName"]) as cur:
+            # طريق رئيسي شرق-غرب
+            pts = [
+                arcpy.Point(base_x - 1000, base_y),
+                arcpy.Point(base_x + 1000, base_y)
             ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points1), spatial_reference), 
-                            "Main Street", "Arterial", 24])
-            
-            # North-south road (perpendicular)
-            points2 = [
-                arcpy.Point(base_x, base_y - 500),
-                arcpy.Point(base_x, base_y + 500)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points2), spatial_reference), 
-                            "First Avenue", "Collector", 18])
-            
-            # Diagonal road (for angle testing)
-            points3 = [
-                arcpy.Point(base_x + 200, base_y - 300),
-                arcpy.Point(base_x + 400, base_y + 300)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points3), spatial_reference), 
-                            "Diagonal Drive", "Local", 12])
-        
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference), "Main Road"])
         print(f"Created: {roads_fc}")
-    
-    # =========================================
-    # BUILDINGS - Existing buildings
-    # =========================================
-    buildings_fc = os.path.join(gdb_path, "Buildings")
-    
-    if not arcpy.Exists(buildings_fc):
+
+    # =============================== Highways ================================
+    hw_fc = os.path.join(gdb_path, "Highways")
+    if not arcpy.Exists(hw_fc):
         arcpy.CreateFeatureclass_management(
-            gdb_path, "Buildings", "POLYGON",
+            gdb_path, "Highways", "POLYLINE",
             spatial_reference=spatial_reference
         )
-        arcpy.AddField_management(buildings_fc, "BuildingType", "TEXT", field_length=50)
-        arcpy.AddField_management(buildings_fc, "Height", "DOUBLE")
-        
-        with arcpy.da.InsertCursor(buildings_fc, ['SHAPE@', 'BuildingType', 'Height']) as cursor:
-            # Building 1 - northeast of intersection
-            b1 = create_rectangle(base_x + 50, base_y + 50, 30, 20, spatial_reference)
-            cursor.insertRow([b1, "Commercial", 10])
-            
-            # Building 2 - southwest of intersection
-            b2 = create_rectangle(base_x - 80, base_y - 80, 25, 25, spatial_reference)
-            cursor.insertRow([b2, "Residential", 5])
-            
-            # Building 3 - near diagonal road
-            b3 = create_rectangle(base_x + 300, base_y + 100, 40, 30, spatial_reference)
-            cursor.insertRow([b3, "Industrial", 15])
-        
-        print(f"Created: {buildings_fc}")
-    
-    # =========================================
-    # UTILITIES - Existing utility lines
-    # =========================================
-    utilities_fc = os.path.join(gdb_path, "Utilities")
-    
-    if not arcpy.Exists(utilities_fc):
+        arcpy.AddField_management(hw_fc, "HwyName", "TEXT", field_length=100)
+        with arcpy.da.InsertCursor(hw_fc, ["SHAPE@", "HwyName"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 1500, base_y - 800),
+                arcpy.Point(base_x + 1500, base_y - 800)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference), "HWY-1"])
+        print(f"Created: {hw_fc}")
+
+    # =============================== Pipelines ===============================
+    pipe_fc = os.path.join(gdb_path, "Pipelines")
+    if not arcpy.Exists(pipe_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Pipelines", "POLYLINE",
+            spatial_reference=spatial_reference
+        )
+        arcpy.AddField_management(pipe_fc, "DIAMETER_INCHES", "DOUBLE")
+        with arcpy.da.InsertCursor(pipe_fc, ["SHAPE@", "DIAMETER_INCHES"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 1000, base_y + 400),
+                arcpy.Point(base_x + 1000, base_y + 400)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference), 30])
+        print(f"Created: {pipe_fc}")
+
+    # =============================== Pipeline_ROW ============================
+    row_fc = os.path.join(gdb_path, "Pipeline_ROW")
+    if not arcpy.Exists(row_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Pipeline_ROW", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(row_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x, base_y + 400, 2100, 80, spatial_reference)  # ROW ~40m each side
+            cur.insertRow([poly])
+        print(f"Created: {row_fc}")
+
+    # =============================== Flowlines ===============================
+    flow_fc = os.path.join(gdb_path, "Flowlines")
+    if not arcpy.Exists(flow_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Flowlines", "POLYLINE",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(flow_fc, ["SHAPE@"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 800, base_y + 200),
+                arcpy.Point(base_x + 800, base_y + 200)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference)])
+        print(f"Created: {flow_fc}")
+
+    # =============================== Powerline_OHTL ==========================
+    pl_fc = os.path.join(gdb_path, "Powerline_OHTL")
+    if not arcpy.Exists(pl_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Powerline_OHTL", "POLYLINE",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(pl_fc, ["SHAPE@"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 1000, base_y + 800),
+                arcpy.Point(base_x + 1000, base_y + 800)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference)])
+        print(f"Created: {pl_fc}")
+
+    # =============================== Powerline_ROW ===========================
+    pl_row_fc = os.path.join(gdb_path, "Powerline_ROW")
+    if not arcpy.Exists(pl_row_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Powerline_ROW", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(pl_row_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x, base_y + 800, 2100, 100, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {pl_row_fc}")
+
+    # =============================== Fiber_Optic_Cable =======================
+    fc = os.path.join(gdb_path, "Fiber_Optic_Cable")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Fiber_Optic_Cable", "POLYLINE",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 800, base_y - 200),
+                arcpy.Point(base_x + 800, base_y - 200)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference)])
+        print(f"Created: {fc}")
+
+    # =============================== Communication_Cable =====================
+    fc = os.path.join(gdb_path, "Communication_Cable")
+    if not arcpy.Exists(fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Communication_Cable", "POLYLINE",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(fc, ["SHAPE@"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 800, base_y - 250),
+                arcpy.Point(base_x + 800, base_y - 250)
+            ]
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference)])
+        print(f"Created: {fc}")
+
+    # =============================== Wells (نقطة) ============================
+    wells_fc = os.path.join(gdb_path, "Wells")
+    if not arcpy.Exists(wells_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Wells", "POINT",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(wells_fc, ["SHAPE@"]) as cur:
+            cur.insertRow([arcpy.Point(base_x + 500, base_y + 100)])
+        print(f"Created: {wells_fc}")
+
+    # =============================== Hazard_Zones ============================
+    hz_fc = os.path.join(gdb_path, "Hazard_Zones")
+    if not arcpy.Exists(hz_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Hazard_Zones", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(hz_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 500, base_y - 300, 400, 400, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {hz_fc}")
+
+    # =============================== Environmental_Buffers ===================
+    env_fc = os.path.join(gdb_path, "Environmental_Buffers")
+    if not arcpy.Exists(env_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Environmental_Buffers", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(env_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 600, base_y - 400, 600, 400, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {env_fc}")
+
+    # =============================== GOSP_Facilities =========================
+    gosp_fc = os.path.join(gdb_path, "GOSP_Facilities")
+    if not arcpy.Exists(gosp_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "GOSP_Facilities", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(gosp_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 800, base_y + 300, 200, 200, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {gosp_fc}")
+
+    # =============================== Gas_Plants ==============================
+    gas_fc = os.path.join(gdb_path, "Gas_Plants")
+    if not arcpy.Exists(gas_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Gas_Plants", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(gas_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 900, base_y + 300, 250, 250, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {gas_fc}")
+
+    # =============================== Substations =============================
+    sub_fc = os.path.join(gdb_path, "Substations")
+    if not arcpy.Exists(sub_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Substations", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(sub_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 200, base_y + 600, 150, 150, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {sub_fc}")
+
+    # =============================== Pump_Stations ===========================
+    pump_fc = os.path.join(gdb_path, "Pump_Stations")
+    if not arcpy.Exists(pump_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Pump_Stations", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(pump_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 200, base_y + 600, 150, 150, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {pump_fc}")
+
+    # =============================== Schools =================================
+    sch_fc = os.path.join(gdb_path, "Schools")
+    if not arcpy.Exists(sch_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Schools", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(sch_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 600, base_y + 50, 150, 150, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {sch_fc}")
+
+    # =============================== Hospitals ===============================
+    hosp_fc = os.path.join(gdb_path, "Hospitals")
+    if not arcpy.Exists(hosp_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Hospitals", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(hosp_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 600, base_y - 150, 150, 150, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {hosp_fc}")
+
+    # =============================== Industrial_Facilities ===================
+    ind_fc = os.path.join(gdb_path, "Industrial_Facilities")
+    if not arcpy.Exists(ind_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Industrial_Facilities", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(ind_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 600, base_y + 50, 200, 200, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {ind_fc}")
+
+    # =============================== ResidentialAreas ========================
+    res_fc = os.path.join(gdb_path, "ResidentialAreas")
+    if not arcpy.Exists(res_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "ResidentialAreas", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(res_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x - 600, base_y - 50, 250, 250, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {res_fc}")
+
+    # =============================== Utilities (Generic) =====================
+    util_fc = os.path.join(gdb_path, "Utilities")
+    if not arcpy.Exists(util_fc):
         arcpy.CreateFeatureclass_management(
             gdb_path, "Utilities", "POLYLINE",
             spatial_reference=spatial_reference
         )
-        arcpy.AddField_management(utilities_fc, "UTILITY_TYPE", "TEXT", field_length=50)
-        arcpy.AddField_management(utilities_fc, "DIAMETER_INCHES", "DOUBLE")
-        
-        with arcpy.da.InsertCursor(utilities_fc, ['SHAPE@', 'UTILITY_TYPE', 'DIAMETER_INCHES']) as cursor:
-            # Water main along Main Street
-            points1 = [
-                arcpy.Point(base_x - 400, base_y + 10),
-                arcpy.Point(base_x + 400, base_y + 10)
+        with arcpy.da.InsertCursor(util_fc, ["SHAPE@"]) as cur:
+            pts = [
+                arcpy.Point(base_x - 1000, base_y + 100),
+                arcpy.Point(base_x + 1000, base_y + 100)
             ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points1), spatial_reference), 
-                            "Water", 12])
-            
-            # Sewer main along First Avenue
-            points2 = [
-                arcpy.Point(base_x + 15, base_y - 400),
-                arcpy.Point(base_x + 15, base_y + 400)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points2), spatial_reference), 
-                            "Sewer", 18])
-            
-            # Gas pipeline (diagonal)
-            points3 = [
-                arcpy.Point(base_x - 300, base_y - 200),
-                arcpy.Point(base_x + 300, base_y + 200)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points3), spatial_reference), 
-                            "Pipeline", 8])
-        
-        print(f"Created: {utilities_fc}")
-    
-    # =========================================
-    # PARCELS - Property boundaries
-    # =========================================
-    parcels_fc = os.path.join(gdb_path, "Parcels")
-    
-    if not arcpy.Exists(parcels_fc):
+            cur.insertRow([arcpy.Polyline(arcpy.Array(pts), spatial_reference)])
+        print(f"Created: {util_fc}")
+
+    # =============================== ROW_Corridors ===========================
+    rowc_fc = os.path.join(gdb_path, "ROW_Corridors")
+    if not arcpy.Exists(rowc_fc):
         arcpy.CreateFeatureclass_management(
-            gdb_path, "Parcels", "POLYGON",
+            gdb_path, "ROW_Corridors", "POLYGON",
             spatial_reference=spatial_reference
         )
-        arcpy.AddField_management(parcels_fc, "ParcelID", "TEXT", field_length=20)
-        arcpy.AddField_management(parcels_fc, "Owner", "TEXT", field_length=100)
-        arcpy.AddField_management(parcels_fc, "Zoning", "TEXT", field_length=20)
-        
-        with arcpy.da.InsertCursor(parcels_fc, ['SHAPE@', 'ParcelID', 'Owner', 'Zoning']) as cursor:
-            # Parcel 1 - NE quadrant
-            p1 = create_rectangle(base_x + 20, base_y + 20, 200, 200, spatial_reference)
-            cursor.insertRow([p1, "P001", "Acme Corp", "C-1"])
-            
-            # Parcel 2 - NW quadrant
-            p2 = create_rectangle(base_x - 220, base_y + 20, 200, 200, spatial_reference)
-            cursor.insertRow([p2, "P002", "Smith Family Trust", "R-1"])
-            
-            # Parcel 3 - SW quadrant
-            p3 = create_rectangle(base_x - 220, base_y - 220, 200, 200, spatial_reference)
-            cursor.insertRow([p3, "P003", "City of Test", "P"])
-            
-            # Parcel 4 - SE quadrant
-            p4 = create_rectangle(base_x + 20, base_y - 220, 200, 200, spatial_reference)
-            cursor.insertRow([p4, "P004", "Jones LLC", "I-1"])
-        
-        print(f"Created: {parcels_fc}")
-    
+        with arcpy.da.InsertCursor(rowc_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x, base_y - 600, 2000, 150, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {rowc_fc}")
+
+    # =============================== Voltage_Influence_Zone ==================
+    volt_fc = os.path.join(gdb_path, "Voltage_Influence_Zone")
+    if not arcpy.Exists(volt_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Voltage_Influence_Zone", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(volt_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 200, base_y + 800, 600, 300, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {volt_fc}")
+
+    # =============================== Airport_Protection_Zones ================
+    ap_fc = os.path.join(gdb_path, "Airport_Protection_Zones")
+    if not arcpy.Exists(ap_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Airport_Protection_Zones", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(ap_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 1500, base_y + 1500, 800, 400, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {ap_fc}")
+
+    # =============================== Existing_Buildings ======================
+    bld_fc = os.path.join(gdb_path, "Existing_Buildings")
+    if not arcpy.Exists(bld_fc):
+        arcpy.CreateFeatureclass_management(
+            gdb_path, "Existing_Buildings", "POLYGON",
+            spatial_reference=spatial_reference
+        )
+        with arcpy.da.InsertCursor(bld_fc, ["SHAPE@"]) as cur:
+            poly = create_rectangle(base_x + 100, base_y + 50, 80, 60, spatial_reference)
+            cur.insertRow([poly])
+        print(f"Created: {bld_fc}")
+
     return {
-        'Roads': roads_fc,
-        'Buildings': buildings_fc,
-        'Utilities': utilities_fc,
-        'Parcels': parcels_fc
+        "Company_Reservation": os.path.join(gdb_path, "Company_Reservation"),
+        "Released_Areas": os.path.join(gdb_path, "Released_Areas"),
+        "Disputed_Areas": os.path.join(gdb_path, "Disputed_Areas"),
+        "Five_KM_Influence_Zone": os.path.join(gdb_path, "Five_KM_Influence_Zone"),
+        "Roads": roads_fc,
+        "Highways": hw_fc,
+        "Pipelines": pipe_fc,
+        "Pipeline_ROW": row_fc,
+        "Flowlines": flow_fc,
+        "Powerline_OHTL": pl_fc,
+        "Powerline_ROW": pl_row_fc,
+        "Fiber_Optic_Cable": os.path.join(gdb_path, "Fiber_Optic_Cable"),
+        "Communication_Cable": os.path.join(gdb_path, "Communication_Cable"),
+        "Wells": wells_fc,
+        "Hazard_Zones": hz_fc,
+        "Environmental_Buffers": env_fc,
+        "GOSP_Facilities": gosp_fc,
+        "Gas_Plants": gas_fc,
+        "Substations": sub_fc,
+        "Pump_Stations": pump_fc,
+        "Schools": sch_fc,
+        "Hospitals": hosp_fc,
+        "Industrial_Facilities": ind_fc,
+        "ResidentialAreas": res_fc,
+        "Utilities": util_fc,
+        "ROW_Corridors": rowc_fc,
+        "Voltage_Influence_Zone": volt_fc,
+        "Airport_Protection_Zones": ap_fc,
+        "Existing_Buildings": bld_fc
     }
 
 
-def create_proposed_features(gdb_path, project_id="TEST001", spatial_reference=SR_WEB_MERCATOR):
+# ---------------------------------------------------------------------------
+# إنشاء الطبقات المقترحة (Proposed_Sites + Temporary_Use_Areas)
+# ---------------------------------------------------------------------------
+
+def create_lup_proposed_features(gdb_path, project_id="LUP001", spatial_reference=SR_WEB_MERCATOR):
     """
-    Create proposed feature classes with various validation scenarios
-    
-    Creates features that will:
-        - PASS validation (correct setbacks, angles, containment)
-        - FAIL validation (violations for testing)
+    Creates:
+      - Proposed_Sites (POLYGON) with USE_TYPE, OCCUPANCY, Scenario
+      - Temporary_Use_Areas (POLYGON) مع OCCUPANCY
+    مواقع مختارة بحيث:
+      - بعضها PASS
+      - بعضها FAIL Pipeline / Wells / Hazard / School / Hospital / Voltage / ROW
     """
-    
+
     base_x = -12345000
     base_y = 3812000
-    
-    # =========================================
-    # PROPOSED ROADS - Test intersection angles
-    # =========================================
-    proposed_roads_fc = os.path.join(gdb_path, f"ProposedRoads_{project_id}")
-    
-    if not arcpy.Exists(proposed_roads_fc):
+
+    # =============================== Proposed_Sites ==========================
+    prop_fc = os.path.join(gdb_path, "Proposed_Sites")
+    if not arcpy.Exists(prop_fc):
         arcpy.CreateFeatureclass_management(
-            gdb_path, f"ProposedRoads_{project_id}", "POLYLINE",
+            gdb_path, "Proposed_Sites", "POLYGON",
             spatial_reference=spatial_reference
         )
-        arcpy.AddField_management(proposed_roads_fc, "RoadName", "TEXT", field_length=100)
-        arcpy.AddField_management(proposed_roads_fc, "Scenario", "TEXT", field_length=50)
-        
-        with arcpy.da.InsertCursor(proposed_roads_fc, ['SHAPE@', 'RoadName', 'Scenario']) as cursor:
-            # Scenario 1: PASS - Perpendicular intersection (90°)
-            points1 = [
-                arcpy.Point(base_x + 100, base_y - 100),
-                arcpy.Point(base_x + 100, base_y + 100)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points1), spatial_reference), 
-                            "New Street A", "PASS_PERPENDICULAR"])
-            
-            # Scenario 2: PASS - 45° angle intersection
-            points2 = [
-                arcpy.Point(base_x - 200, base_y - 100),
-                arcpy.Point(base_x - 100, base_y + 100)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points2), spatial_reference), 
-                            "New Street B", "PASS_45_DEGREE"])
-            
-            # Scenario 3: FAIL - Acute angle intersection (~15°)
-            points3 = [
-                arcpy.Point(base_x - 300, base_y - 50),
-                arcpy.Point(base_x - 100, base_y + 20)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points3), spatial_reference), 
-                            "Bad Street C", "FAIL_ACUTE_ANGLE"])
-        
-        print(f"Created: {proposed_roads_fc}")
-    
-    # =========================================
-    # PROPOSED BUILDINGS - Test setbacks & containment
-    # =========================================
-    proposed_buildings_fc = os.path.join(gdb_path, f"ProposedBuildings_{project_id}")
-    
-    if not arcpy.Exists(proposed_buildings_fc):
+        arcpy.AddField_management(prop_fc, "ProjectID", "TEXT", field_length=20)
+        arcpy.AddField_management(prop_fc, "USE_TYPE", "TEXT", field_length=50)
+        arcpy.AddField_management(prop_fc, "OCCUPANCY", "LONG")
+        arcpy.AddField_management(prop_fc, "Scenario", "TEXT", field_length=80)
+
+        with arcpy.da.InsertCursor(prop_fc, ["SHAPE@", "ProjectID", "USE_TYPE", "OCCUPANCY", "Scenario"]) as cur:
+            # 1) PASS عام: داخل Company_Reservation، بعيد عن كل شيء
+            s1 = create_rectangle(base_x - 200, base_y + 200, 100, 100, spatial_reference)
+            cur.insertRow([s1, project_id, "Industrial", 20, "PASS_GENERAL"])
+
+            # 2) FAIL Pipeline distance (<30m) & ROW overlap
+            s2 = create_rectangle(base_x, base_y + 400, 60, 60, spatial_reference)
+            cur.insertRow([s2, project_id, "Industrial", 30, "FAIL_PIPELINE_CLEARANCE"])
+
+            # 3) FAIL Well distance (<60m)
+            s3 = create_rectangle(base_x + 500, base_y + 120, 60, 60, spatial_reference)
+            cur.insertRow([s3, project_id, "Residential", 50, "FAIL_WELL_BUFFER"])
+
+            # 4) FAIL Hazard zone overlap
+            s4 = create_rectangle(base_x - 500, base_y - 300, 100, 100, spatial_reference)
+            cur.insertRow([s4, project_id, "Industrial", 40, "FAIL_HAZARD_ZONE"])
+
+            # 5) FAIL Environmental buffer overlap
+            s5 = create_rectangle(base_x + 600, base_y - 400, 80, 80, spatial_reference)
+            cur.insertRow([s5, project_id, "Industrial", 35, "FAIL_ENV_BUFFER"])
+
+            # 6) WARNING School buffer (Industrial قريب من مدرسة)
+            s6 = create_rectangle(base_x + 500, base_y + 80, 80, 80, spatial_reference)
+            cur.insertRow([s6, project_id, "Industrial", 60, "WARN_SCHOOL_BUFFER"])
+
+            # 7) WARNING Hospital buffer (HighRisk قريب من مستشفى)
+            s7 = create_rectangle(base_x + 500, base_y - 150, 80, 80, spatial_reference)
+            cur.insertRow([s7, project_id, "HighRisk", 60, "WARN_HOSPITAL_BUFFER"])
+
+            # 8) INFO داخل Five_KM_Influence_Zone لكن خارج Company_Reservation
+            s8 = create_rectangle(base_x + 3500, base_y + 3500, 100, 100, spatial_reference)
+            cur.insertRow([s8, project_id, "Industrial", 10, "INFO_5KM_ZONE"])
+
+            # 9) FAIL Voltage influence zone لـ USE_TYPE = Residential
+            s9 = create_rectangle(base_x + 200, base_y + 800, 80, 80, spatial_reference)
+            cur.insertRow([s9, project_id, "Residential", 30, "FAIL_VOLTAGE_ZONE"])
+
+            # 10) FAIL ROW_Corridors (داخل ممر ROW)
+            s10 = create_rectangle(base_x, base_y - 600, 150, 100, spatial_reference)
+            cur.insertRow([s10, project_id, "Industrial", 25, "FAIL_ROW_CORRIDOR"])
+
+        print(f"Created: {prop_fc}")
+
+    # =============================== Temporary_Use_Areas =====================
+    temp_fc = os.path.join(gdb_path, "Temporary_Use_Areas")
+    if not arcpy.Exists(temp_fc):
         arcpy.CreateFeatureclass_management(
-            gdb_path, f"ProposedBuildings_{project_id}", "POLYGON",
+            gdb_path, "Temporary_Use_Areas", "POLYGON",
             spatial_reference=spatial_reference
         )
-        arcpy.AddField_management(proposed_buildings_fc, "BuildingName", "TEXT", field_length=100)
-        arcpy.AddField_management(proposed_buildings_fc, "Scenario", "TEXT", field_length=50)
-        
-        with arcpy.da.InsertCursor(proposed_buildings_fc, ['SHAPE@', 'BuildingName', 'Scenario']) as cursor:
-            # Scenario 1: PASS - Good setback (25m from road), within parcel
-            b1 = create_rectangle(base_x + 80, base_y + 80, 30, 25, spatial_reference)
-            cursor.insertRow([b1, "Building A", "PASS_SETBACK_CONTAINMENT"])
-            
-            # Scenario 2: FAIL - Too close to road (5m setback)
-            b2 = create_rectangle(base_x - 150, base_y + 5, 20, 20, spatial_reference)
-            cursor.insertRow([b2, "Building B", "FAIL_SETBACK"])
-            
-            # Scenario 3: FAIL - Outside parcel boundary
-            b3 = create_rectangle(base_x + 250, base_y + 250, 25, 25, spatial_reference)
-            cursor.insertRow([b3, "Building C", "FAIL_CONTAINMENT"])
-            
-            # Scenario 4: FAIL - Too close to existing building
-            b4 = create_rectangle(base_x + 45, base_y + 45, 15, 15, spatial_reference)
-            cursor.insertRow([b4, "Building D", "FAIL_SEPARATION"])
-        
-        print(f"Created: {proposed_buildings_fc}")
-    
-    # =========================================
-    # PROPOSED UTILITIES - Test crossing angles
-    # =========================================
-    proposed_utilities_fc = os.path.join(gdb_path, f"ProposedUtilities_{project_id}")
-    
-    if not arcpy.Exists(proposed_utilities_fc):
-        arcpy.CreateFeatureclass_management(
-            gdb_path, f"ProposedUtilities_{project_id}", "POLYLINE",
-            spatial_reference=spatial_reference
-        )
-        arcpy.AddField_management(proposed_utilities_fc, "UTILITY_TYPE", "TEXT", field_length=50)
-        arcpy.AddField_management(proposed_utilities_fc, "DIAMETER_INCHES", "DOUBLE")
-        arcpy.AddField_management(proposed_utilities_fc, "Scenario", "TEXT", field_length=50)
-        
-        with arcpy.da.InsertCursor(proposed_utilities_fc, 
-                                    ['SHAPE@', 'UTILITY_TYPE', 'DIAMETER_INCHES', 'Scenario']) as cursor:
-            # Scenario 1: PASS - Perpendicular road crossing
-            points1 = [
-                arcpy.Point(base_x + 150, base_y - 50),
-                arcpy.Point(base_x + 150, base_y + 50)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points1), spatial_reference), 
-                            "Water", 6, "PASS_CROSSING_ANGLE"])
-            
-            # Scenario 2: WARNING - Shallow road crossing (~30°)
-            points2 = [
-                arcpy.Point(base_x - 150, base_y - 30),
-                arcpy.Point(base_x - 50, base_y + 50)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points2), spatial_reference), 
-                            "Sewer", 8, "WARN_SHALLOW_CROSSING"])
-            
-            # Scenario 3: FAIL - Too close to existing pipeline
-            points3 = [
-                arcpy.Point(base_x - 280, base_y - 190),
-                arcpy.Point(base_x + 280, base_y + 190)
-            ]
-            cursor.insertRow([arcpy.Polyline(arcpy.Array(points3), spatial_reference), 
-                            "Pipeline", 12, "FAIL_PIPELINE_SEPARATION"])
-        
-        print(f"Created: {proposed_utilities_fc}")
-    
+        arcpy.AddField_management(temp_fc, "ProjectID", "TEXT", field_length=20)
+        arcpy.AddField_management(temp_fc, "OCCUPANCY", "LONG")
+        arcpy.AddField_management(temp_fc, "Scenario", "TEXT", field_length=80)
+
+        with arcpy.da.InsertCursor(temp_fc, ["SHAPE@", "ProjectID", "OCCUPANCY", "Scenario"]) as cur:
+            # Camp قريب من ResidentialAreas، Occupancy كبير → FAIL / WARNING
+            c1 = create_rectangle(base_x - 600, base_y - 50, 120, 120, spatial_reference)
+            cur.insertRow([c1, project_id, 80, "FAIL_TEMP_CAMP_NEAR_RESIDENTIAL"])
+
+            # Camp بعيد (PASS)
+            c2 = create_rectangle(base_x - 2000, base_y - 2000, 120, 120, spatial_reference)
+            cur.insertRow([c2, project_id, 40, "PASS_TEMP_CAMP_FAR"])
+
+        print(f"Created: {temp_fc}")
+
     return {
-        'ProposedRoads': proposed_roads_fc,
-        'ProposedBuildings': proposed_buildings_fc,
-        'ProposedUtilities': proposed_utilities_fc
+        "Proposed_Sites": os.path.join(gdb_path, "Proposed_Sites"),
+        "Temporary_Use_Areas": os.path.join(gdb_path, "Temporary_Use_Areas")
     }
 
 
-def create_rectangle(center_x, center_y, width, height, spatial_reference):
-    """
-    Create a rectangular polygon geometry
-    
-    Args:
-        center_x: Center X coordinate
-        center_y: Center Y coordinate
-        width: Rectangle width
-        height: Rectangle height
-        spatial_reference: Spatial reference for geometry
-        
-    Returns:
-        arcpy.Polygon geometry
-    """
-    half_w = width / 2
-    half_h = height / 2
-    
-    points = [
-        arcpy.Point(center_x - half_w, center_y - half_h),
-        arcpy.Point(center_x + half_w, center_y - half_h),
-        arcpy.Point(center_x + half_w, center_y + half_h),
-        arcpy.Point(center_x - half_w, center_y + half_h),
-        arcpy.Point(center_x - half_w, center_y - half_h)  # Close ring
-    ]
-    
-    return arcpy.Polygon(arcpy.Array(points), spatial_reference)
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
 
+def create_all_lup_test_data(output_folder=None, project_id="LUP001"):
+    if output_folder is None:
+        output_folder = tempfile.gettempdir()
 
-def create_all_test_data(output_folder, project_id="TEST001"):
-    """
-    Create complete test dataset
-    
-    Args:
-        output_folder: Folder to create geodatabase in
-        project_id: Project identifier for proposed features
-        
-    Returns:
-        Dictionary of all created feature classes
-    """
-    # Create geodatabase
-    gdb_path = create_test_geodatabase(output_folder)
-    
-    # Create infrastructure (existing) features
-    infrastructure = create_infrastructure_features(gdb_path)
-    
-    # Create proposed features
-    proposed = create_proposed_features(gdb_path, project_id)
-    
+    print(f"Creating LUP test data in folder: {output_folder}")
+
+    gdb_path = create_lup_geodatabase(output_folder)
+    infra = create_lup_infrastructure_features(gdb_path)
+    proposed = create_lup_proposed_features(gdb_path, project_id)
+
     print("\n" + "=" * 60)
-    print("TEST DATA CREATION COMPLETE")
+    print("LUP TEST DATA CREATION COMPLETE")
     print("=" * 60)
     print(f"\nGeodatabase: {gdb_path}")
     print("\nInfrastructure Feature Classes:")
-    for name, path in infrastructure.items():
-        print(f"  - {name}")
+    for name, path in infra.items():
+        print(f"  - {name}: {path}")
     print("\nProposed Feature Classes:")
     for name, path in proposed.items():
-        print(f"  - {name}")
-    print("\nExpected Validation Results:")
-    print("  Roads:")
-    print("    - New Street A: PASS (perpendicular)")
-    print("    - New Street B: PASS (45° angle)")
-    print("    - Bad Street C: FAIL (acute angle ~15°)")
-    print("  Buildings:")
-    print("    - Building A: PASS (good setback & containment)")
-    print("    - Building B: FAIL (setback violation)")
-    print("    - Building C: FAIL (containment violation)")
-    print("    - Building D: FAIL (separation violation)")
-    print("  Utilities:")
-    print("    - Water Line: PASS (perpendicular crossing)")
-    print("    - Sewer Line: WARNING (shallow crossing)")
-    print("    - Pipeline: FAIL (separation violation)")
+        print(f"  - {name}: {path}")
+    print("\nYou can now:")
+    print("  1) Add this GDB to ArcGIS Pro")
+    print("  2) Use 'Validate Project' with:")
+    print(f"       Project ID = {project_id}")
+    print("       Feature Classes to Validate = Proposed_Sites, Temporary_Use_Areas (and others if needed)")
+    print("  3) Use rules_config.json you already built.")
     print("=" * 60)
-    
+
     return {
-        'geodatabase': gdb_path,
-        'infrastructure': infrastructure,
-        'proposed': proposed
+        "geodatabase": gdb_path,
+        "infrastructure": infra,
+        "proposed": proposed
     }
-
-
-# ============================================================================
-# MAIN - Run when script is executed directly
-# ============================================================================
-
 if __name__ == "__main__":
-    import tempfile
-    
-    # Create test data in temp folder
-    output_folder = tempfile.gettempdir()
-    print(f"Creating test data in: {output_folder}")
-    
-    result = create_all_test_data(output_folder, "TEST001")
-    
-    print(f"\nTo use in ArcGIS Pro:")
-    print(f"1. Add connection to: {result['geodatabase']}")
-    print(f"2. Run Validate Project tool with Project ID: TEST001")
-
+    create_all_lup_test_data()
